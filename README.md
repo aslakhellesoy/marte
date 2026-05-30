@@ -1,6 +1,6 @@
 # marte
 
-**Two-way sync between MARkdown and sveTE.**
+**Two-way sync between MARkdown and svelTE.**
 
 Keep your page _copy_ in Markdown. Keep your _design_ in Svelte. `marte` injects
 the Markdown into your components at build time, so the text you read and edit
