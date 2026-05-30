@@ -12,8 +12,9 @@ export default defineConfig({
 			locales: ['en', 'no'],
 			baseLocale: 'en',
 			runtimeLocale: {
-				importStatement: "import { getLocale } from '$demo/locale.svelte';",
-				expression: 'getLocale()'
+				// Aliased so it never collides with a page's own `getLocale` import.
+				importStatement: "import { getLocale as __marteLocale } from '$demo/locale.svelte';",
+				expression: '__marteLocale()'
 			}
 		}),
 		sveltekit()
