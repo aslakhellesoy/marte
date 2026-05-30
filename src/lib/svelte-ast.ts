@@ -1,5 +1,4 @@
 import { parse } from 'svelte/compiler';
-import { errAt } from './errors.ts';
 
 // The Svelte compiler returns rich AST shapes that we touch loosely. Use a
 // permissive node type with the fields we actually care about.
@@ -27,13 +26,10 @@ type SvelteAttributeValue = {
 	raw?: string;
 };
 
-export type ParsedSelector = {
-	readonly tag: string | null;
-	readonly classes: ReadonlySet<string>;
-	readonly id: string | null;
-	readonly marte: string | null;
-	readonly raw: string;
-};
+/** The attribute that marks an element as marte-managed. */
+export const MARKER_ATTR = 'data-marte';
+/** A leading comment `<!-- marte -->` / `<!-- @marte -->` also marks the next node. */
+const MARKER_COMMENT = /^\s*@?marte\s*$/;
 
 export function parseSvelte(source: string): SvelteNode[] {
 	type LooseAst = {
@@ -66,6 +62,10 @@ export function childNodes(n: SvelteNode): SvelteNode[] {
 	return n.fragment?.nodes ?? n.children ?? [];
 }
 
+export function hasElementChild(nodes: readonly SvelteNode[]): boolean {
+	return nodes.some(isElement);
+}
+
 export function staticAttr(node: SvelteNode, attrName: string): string | null {
 	const attrs = node.attributes ?? [];
 	const a = attrs.find((x) => x.type === 'Attribute' && x.name === attrName);
@@ -76,59 +76,41 @@ export function staticAttr(node: SvelteNode, attrName: string): string | null {
 	return parts.map((p) => p.data ?? p.raw ?? '').join('');
 }
 
-export function elementClasses(node: SvelteNode): Set<string> {
-	const classes = new Set<string>();
-	const cls = staticAttr(node, 'class');
-	if (cls)
-		cls
-			.split(/\s+/)
-			.filter(Boolean)
-			.forEach((c) => classes.add(c));
-	for (const a of node.attributes ?? []) {
-		if (a.type === 'ClassDirective' || a.type === 'Class') classes.add(a.name);
-	}
-	return classes;
+export function hasAttr(node: SvelteNode, attrName: string): boolean {
+	return (node.attributes ?? []).some((a) => a.type === 'Attribute' && a.name === attrName);
 }
 
-// Parse "section.hero#top" or "@hero-intro" or "p@hero" -> { tag, classes, id, marte }.
-// `@name` matches the element carrying data-marte="name".
-export function parseSelector(sel: string, file: string, line: number): ParsedSelector {
-	const m = sel.match(/^([a-zA-Z][\w-]*)?((?:[.#@][\w-]+)*)$/);
-	if (!m) throw errAt(file, line, `invalid selector \`${sel}\``);
-	const tag = m[1] || null;
-	const classes = new Set<string>();
-	let id: string | null = null;
-	let marte: string | null = null;
-	for (const tok of m[2].matchAll(/([.#@])([\w-]+)/g)) {
-		if (tok[1] === '.') classes.add(tok[2]);
-		else if (tok[1] === '#') id = tok[2];
-		else marte = tok[2];
-	}
-	return { tag, classes, id, marte, raw: sel };
-}
-
-export function nodeMatches(node: SvelteNode, parsed: ParsedSelector): boolean {
-	if (!isElement(node)) return false;
-	if (parsed.tag && node.name.toLowerCase() !== parsed.tag.toLowerCase()) return false;
-	if (parsed.id != null && staticAttr(node, 'id') !== parsed.id) return false;
-	if (parsed.marte != null && staticAttr(node, 'data-marte') !== parsed.marte) return false;
-	if (parsed.classes.size) {
-		const have = elementClasses(node);
-		for (const c of parsed.classes) if (!have.has(c)) return false;
-	}
-	return true;
-}
-
-export function findMatches(scopeNodes: SvelteNode[], parsed: ParsedSelector): SvelteNode[] {
+/**
+ * Walk the AST in document order and return the marte-marked elements — those
+ * carrying `data-marte`, or immediately preceded by a `<!-- marte -->` comment
+ * (the comment form works on Svelte components too, where an attribute would be
+ * a type error). A marked element is NOT descended into: its whole inner content
+ * belongs to its companion Markdown block.
+ */
+export function collectMarkers(nodes: readonly SvelteNode[]): SvelteNode[] {
 	const out: SvelteNode[] = [];
-	const visit = (nodes: SvelteNode[]): void => {
-		for (const n of nodes) {
-			if (!isElement(n)) continue;
-			if (nodeMatches(n, parsed)) out.push(n);
-			visit(childNodes(n));
+	const walk = (list: readonly SvelteNode[]): void => {
+		let pending = false;
+		for (const n of list) {
+			if (n.type === 'Comment') {
+				if (MARKER_COMMENT.test(String(n.data ?? ''))) pending = true;
+				continue;
+			}
+			if (!isElement(n)) {
+				// Whitespace between a comment and its element keeps the marker live.
+				if (n.type === 'Text' && String(n.data ?? '').trim() === '') continue;
+				pending = false;
+				continue;
+			}
+			if (pending || hasAttr(n, MARKER_ATTR)) {
+				out.push(n);
+				pending = false;
+				continue; // do not descend into a marked element
+			}
+			walk(childNodes(n));
 		}
 	};
-	visit(scopeNodes);
+	walk(nodes);
 	return out;
 }
 
@@ -169,8 +151,24 @@ export function findOpenTagEnd(slice: string): number {
 	return -1;
 }
 
+/** Character offset just past the open tag name, i.e. where attributes go. */
+export function openTagNameEnd(node: SvelteNode): number {
+	return (node.start ?? 0) + 1 + (node.name?.length ?? 0);
+}
+
 export function leadingIndent(source: string, pos: number): string {
 	const lineStart = source.lastIndexOf('\n', pos - 1) + 1;
 	const m = source.slice(lineStart, pos).match(/^\s*/);
 	return m ? m[0] : '';
+}
+
+export type Insert = { readonly pos: number; readonly text: string };
+
+/** Apply position-based string insertions (right-to-left so offsets stay valid). */
+export function applyInserts(source: string, inserts: readonly Insert[]): string {
+	let out = source;
+	for (const ins of [...inserts].sort((a, b) => b.pos - a.pos)) {
+		out = out.slice(0, ins.pos) + ins.text + out.slice(ins.pos);
+	}
+	return out;
 }

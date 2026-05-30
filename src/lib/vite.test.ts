@@ -11,147 +11,88 @@ const RUNTIME: RuntimeLocale = {
 	expression: 'getLocale()'
 };
 
-type MockContext = {
-	error: (msg: string) => never;
-	addWatchFile: (path: string) => void;
-};
-
-function makeContext(): MockContext & { watched: string[] } {
+function makeContext() {
 	const watched: string[] = [];
-	return {
-		watched,
-		error: (msg: string) => {
-			throw new Error(msg);
-		},
-		addWatchFile: (path: string) => {
-			watched.push(path);
-		}
-	};
+	return { watched, addWatchFile: (p: string) => watched.push(p) };
 }
 
-async function runPlugin(plugin: Plugin, sveltePath: string, ctx: MockContext) {
-	if (!plugin.configResolved) throw new Error('plugin missing configResolved');
-	const configResolved = (
-		typeof plugin.configResolved === 'function'
-			? plugin.configResolved
-			: plugin.configResolved.handler
-	) as (config: { root: string }) => Promise<void> | void;
-	await configResolved.call(ctx, { root: process.cwd() });
-	const resolveId = (
-		typeof plugin.resolveId === 'function' ? plugin.resolveId : plugin.resolveId?.handler
-	) as (this: MockContext, source: string, importer?: string) => Promise<string | null | undefined>;
-	const id = await resolveId.call(ctx, 'virtual:marte', sveltePath);
-	if (!id) throw new Error('plugin did not resolve virtual:marte');
-	const load = (typeof plugin.load === 'function' ? plugin.load : plugin.load?.handler) as (
-		this: MockContext,
-		id: string
-	) => Promise<string | null | undefined>;
-	const code = await load.call(ctx, id);
-	if (!code) throw new Error('plugin load returned nothing');
-	return code;
+function hook<T>(h: unknown): T {
+	return (typeof h === 'function' ? h : (h as { handler: unknown }).handler) as T;
 }
 
-describe('marte vite plugin (i18n)', () => {
-	test('emits a per-locale selector→html map for sibling .md files', async () => {
-		const dir = mkdtempSync(join(tmpdir(), 'marte-vite-'));
+async function runTransform(plugin: Plugin, root: string, sveltePath: string, code: string) {
+	const ctx = makeContext();
+	await hook<(c: { root: string }) => Promise<void>>(plugin.configResolved).call(ctx, { root });
+	const transform = hook<
+		(this: typeof ctx, code: string, id: string) => Promise<{ code: string } | null>
+	>(plugin.transform);
+	const result = await transform.call(ctx, code, sveltePath);
+	return { result, watched: ctx.watched };
+}
+
+describe('marte vite plugin — single locale', () => {
+	test('bakes the sibling .md content into the component', async () => {
+		const dir = mkdtempSync(join(tmpdir(), 'marte-'));
 		try {
 			const sveltePath = join(dir, 'Demo.svelte');
-			writeFileSync(sveltePath, '<h1>Placeholder</h1>\n');
-			writeFileSync(join(dir, 'Demo.no.md'), ':::h1 inline\nHei\n:::\n');
-			writeFileSync(join(dir, 'Demo.en.md'), ':::h1 inline\nHello\n:::\n');
+			const code = '<h1 data-marte>Placeholder</h1>\n';
+			writeFileSync(sveltePath, code);
+			writeFileSync(join(dir, 'Demo.md'), 'Hello world\n');
 
-			const plugin = marte({ locales: ['no', 'en'], baseLocale: 'no', runtimeLocale: RUNTIME });
-			const ctx = makeContext();
-			const code = await runPlugin(plugin, sveltePath, ctx);
-
-			expect(code).toContain('export const marteContent');
-			const json = code.match(/=\s*(\{.*\});/s)?.[1];
-			expect(json).toBeTruthy();
-			const map = JSON.parse(json ?? '{}');
-			expect(map.no.h1.html).toContain('Hei');
-			expect(map.en.h1.html).toContain('Hello');
-			expect(map.no.h1.inline).toBe(true);
-
-			expect(ctx.watched).toContain(join(dir, 'Demo.no.md'));
-			expect(ctx.watched).toContain(join(dir, 'Demo.en.md'));
+			const { result, watched } = await runTransform(marte(), dir, sveltePath, code);
+			expect(result?.code).toContain('Hello world');
+			expect(result?.code).not.toContain('Placeholder');
+			expect(watched).toContain(join(dir, 'Demo.md'));
 		} finally {
 			rmSync(dir, { recursive: true, force: true });
 		}
 	});
 
-	test('emits an empty map when no .md companions exist at all', async () => {
-		const dir = mkdtempSync(join(tmpdir(), 'marte-vite-'));
+	test('leaves a .svelte without a companion untouched', async () => {
+		const dir = mkdtempSync(join(tmpdir(), 'marte-'));
 		try {
 			const sveltePath = join(dir, 'Demo.svelte');
-			writeFileSync(sveltePath, '<h1>x</h1>\n');
-			const plugin = marte({ locales: ['no', 'en'], baseLocale: 'no', runtimeLocale: RUNTIME });
-			const ctx = makeContext();
-			const code = await runPlugin(plugin, sveltePath, ctx);
-			const json = code.match(/=\s*(\{.*\});/s)?.[1] ?? '{}';
-			const map = JSON.parse(json);
-			expect(Object.keys(map)).toHaveLength(0);
-		} finally {
-			rmSync(dir, { recursive: true, force: true });
-		}
-	});
-
-	test('rejects imports from non-.svelte files', async () => {
-		const plugin = marte({ locales: ['no', 'en'], baseLocale: 'no', runtimeLocale: RUNTIME });
-		const ctx = makeContext();
-		await expect(runPlugin(plugin, '/some/file.ts', ctx)).rejects.toThrow(
-			/must be imported from a .svelte file/
-		);
-	});
-
-	test('throws when a locale companion is missing while others exist', async () => {
-		const dir = mkdtempSync(join(tmpdir(), 'marte-vite-'));
-		try {
-			const sveltePath = join(dir, 'Demo.svelte');
-			writeFileSync(sveltePath, '<h1>x</h1>\n');
-			writeFileSync(join(dir, 'Demo.no.md'), ':::h1 inline\nHei\n:::\n');
-			// Note: no Demo.en.md.
-			const plugin = marte({ locales: ['no', 'en'], baseLocale: 'no', runtimeLocale: RUNTIME });
-			const ctx = makeContext();
-			await expect(runPlugin(plugin, sveltePath, ctx)).rejects.toThrow(
-				/missing translations for \[en\]/
-			);
-		} finally {
-			rmSync(dir, { recursive: true, force: true });
-		}
-	});
-
-	test('throws when locales disagree on selector keys', async () => {
-		const dir = mkdtempSync(join(tmpdir(), 'marte-vite-'));
-		try {
-			const sveltePath = join(dir, 'Demo.svelte');
-			writeFileSync(sveltePath, '<section>\n  <h1>x</h1>\n  <p>y</p>\n</section>\n');
-			writeFileSync(join(dir, 'Demo.no.md'), ':::h1 inline\nHei\n:::\n:::p inline\nDu\n:::\n');
-			writeFileSync(join(dir, 'Demo.en.md'), ':::h1 inline\nHello\n:::\n');
-			const plugin = marte({ locales: ['no', 'en'], baseLocale: 'no', runtimeLocale: RUNTIME });
-			const ctx = makeContext();
-			await expect(runPlugin(plugin, sveltePath, ctx)).rejects.toThrow(/disagree on selectors/);
+			const code = '<h1 data-marte>x</h1>\n';
+			writeFileSync(sveltePath, code);
+			const { result } = await runTransform(marte(), dir, sveltePath, code);
+			expect(result).toBeNull();
 		} finally {
 			rmSync(dir, { recursive: true, force: true });
 		}
 	});
 });
 
-describe('marte vite plugin (single-locale)', () => {
-	test('emits the selector map directly for a sibling .md', async () => {
-		const dir = mkdtempSync(join(tmpdir(), 'marte-vite-'));
+describe('marte vite plugin — i18n', () => {
+	test('bakes a branch per locale from .<locale>.md companions', async () => {
+		const dir = mkdtempSync(join(tmpdir(), 'marte-'));
 		try {
 			const sveltePath = join(dir, 'Demo.svelte');
-			writeFileSync(sveltePath, '<h1>Placeholder</h1>\n');
-			writeFileSync(join(dir, 'Demo.md'), ':::h1 inline\nHello\n:::\n');
+			const code = '<h1 data-marte>x</h1>\n';
+			writeFileSync(sveltePath, code);
+			writeFileSync(join(dir, 'Demo.en.md'), 'Hello\n');
+			writeFileSync(join(dir, 'Demo.no.md'), 'Hei\n');
 
-			const plugin = marte();
-			const ctx = makeContext();
-			const code = await runPlugin(plugin, sveltePath, ctx);
-			const json = code.match(/=\s*(\{.*\});/s)?.[1] ?? '{}';
-			const map = JSON.parse(json);
-			expect(map.h1.html).toContain('Hello');
-			expect(map.h1.inline).toBe(true);
-			expect(ctx.watched).toContain(join(dir, 'Demo.md'));
+			const plugin = marte({ locales: ['en', 'no'], baseLocale: 'en', runtimeLocale: RUNTIME });
+			const { result } = await runTransform(plugin, dir, sveltePath, code);
+			expect(result?.code).toContain('{#if getLocale() === "en"}');
+			expect(result?.code).toContain('Hello');
+			expect(result?.code).toContain('Hei');
+		} finally {
+			rmSync(dir, { recursive: true, force: true });
+		}
+	});
+
+	test('throws when a locale companion is missing while others exist', async () => {
+		const dir = mkdtempSync(join(tmpdir(), 'marte-'));
+		try {
+			const sveltePath = join(dir, 'Demo.svelte');
+			const code = '<h1 data-marte>x</h1>\n';
+			writeFileSync(sveltePath, code);
+			writeFileSync(join(dir, 'Demo.en.md'), 'Hello\n');
+			const plugin = marte({ locales: ['en', 'no'], baseLocale: 'en', runtimeLocale: RUNTIME });
+			await expect(runTransform(plugin, dir, sveltePath, code)).rejects.toThrow(
+				/missing translations for \[no\]/
+			);
 		} finally {
 			rmSync(dir, { recursive: true, force: true });
 		}
