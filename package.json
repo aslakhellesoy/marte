@@ -1,0 +1,83 @@
+{
+	"name": "vite-plugin-marte",
+	"version": "0.0.0",
+	"description": "A Vite plugin that syncs static content between Svelte components and sibling Markdown files at build time.",
+	"keywords": [
+		"vite-plugin",
+		"svelte",
+		"sveltekit",
+		"markdown",
+		"content",
+		"i18n"
+	],
+	"license": "MIT",
+	"author": "Aslak Hellesøy",
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/aslakhellesoy/marte.git"
+	},
+	"type": "module",
+	"packageManager": "pnpm@10.33.0",
+	"engines": {
+		"node": ">=20"
+	},
+	"files": [
+		"dist"
+	],
+	"bin": {
+		"marte": "./dist/bin.js"
+	},
+	"exports": {
+		".": {
+			"types": "./dist/index.d.ts",
+			"import": "./dist/index.js"
+		},
+		"./vite": {
+			"types": "./dist/vite.d.ts",
+			"import": "./dist/vite.js"
+		}
+	},
+	"scripts": {
+		"dev": "vite dev",
+		"build": "vite build",
+		"preview": "vite preview",
+		"build:lib": "tsc -p tsconfig.lib.json",
+		"prepublishOnly": "pnpm build:lib",
+		"check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
+		"test": "vitest run",
+		"test:watch": "vitest",
+		"lint": "prettier --check . && eslint .",
+		"format": "prettier --write .",
+		"marte": "node --experimental-strip-types ./src/lib/bin.ts",
+		"changeset": "changeset",
+		"version": "changeset version",
+		"release": "pnpm build:lib && changeset publish"
+	},
+	"dependencies": {
+		"marked": "^18.0.4"
+	},
+	"peerDependencies": {
+		"svelte": "^5",
+		"vite": "^5 || ^6 || ^7 || ^8"
+	},
+	"devDependencies": {
+		"@changesets/cli": "^2.31.0",
+		"@eslint/js": "^10.0.1",
+		"@sveltejs/adapter-auto": "^7.0.1",
+		"@sveltejs/kit": "^2.61.1",
+		"@sveltejs/vite-plugin-svelte": "^7.1.2",
+		"@types/node": "^25.9.1",
+		"eslint": "^10.4.1",
+		"eslint-config-prettier": "^10.1.8",
+		"eslint-plugin-svelte": "^3.19.0",
+		"globals": "^17.6.0",
+		"prettier": "^3.8.3",
+		"prettier-plugin-svelte": "^4.0.1",
+		"svelte": "^5.56.0",
+		"svelte-check": "^4.4.8",
+		"typescript": "^6.0.3",
+		"typescript-eslint": "^8.60.0",
+		"vite": "^8.0.14",
+		"vitest": "^4.1.7"
+	}
+}

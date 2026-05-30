@@ -1,0 +1,9 @@
+dist
+.svelte-kit
+build
+node_modules
+pnpm-lock.yaml
+
+# Markdown companion files use marte's `:::` fences, which Prettier would
+# reformat. Keep all Markdown out of Prettier's reach.
+*.md
