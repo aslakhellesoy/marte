@@ -4,8 +4,8 @@
 	injected by the marte plugin at build time. The text below is a design-time
 	preview; marte replaces the inner content of each marked element.
 
-	Markers: `data-marte` on an element, or `<!-- marte -->` before one.
--->
+	Markers: `data-marte` on an element, or `<!-- marte -->`
+before one. -->
 <section class="hero">
 	<h1 data-marte>Design-time heading</h1>
 	<p data-marte>Design-time tagline, replaced by Markdown.</p>

@@ -43,6 +43,14 @@ describe('renderInner — container style transfer', () => {
 		expect(html).toContain('<p class="b">New body</p>');
 	});
 
+	test('passes inline formatting (em, links) through without needing a template', () => {
+		const { templates, tag } = target('<ul data-marte>\n\t<li class="i">A</li>\n</ul>');
+		const html = renderInner('- plain *bold* and [link](https://x)', templates, tag, 'f.md', 1);
+		expect(html).toContain('<li class="i">');
+		expect(html).toContain('<em>bold</em>');
+		expect(html).toContain('<a href="https://x">link</a>');
+	});
+
 	test('fails loudly when the rendered structure does not match the placeholder', () => {
 		const { templates, tag } = target('<ul data-marte>\n\t<li>A</li>\n</ul>');
 		expect(() => renderInner('Just a paragraph.', templates, tag, 'f.md', 1)).toThrow(

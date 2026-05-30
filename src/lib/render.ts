@@ -25,6 +25,42 @@ const escapeBraces = (s: string): string => s.replace(/{/g, '&lbrace;').replace(
 // Svelte directives / event handlers.
 const COPIED_ATTRS = ['class', 'style'] as const;
 
+// Inline/phrasing elements that Markdown produces inside block content (bold,
+// links, code…). Style transfer only mirrors *structural* elements, so these
+// pass through untouched and never need a matching placeholder template.
+const INLINE = new Set([
+	'a',
+	'abbr',
+	'b',
+	'bdi',
+	'bdo',
+	'br',
+	'cite',
+	'code',
+	'data',
+	'del',
+	'dfn',
+	'em',
+	'i',
+	'img',
+	'ins',
+	'kbd',
+	'mark',
+	'q',
+	's',
+	'samp',
+	'small',
+	'span',
+	'strike',
+	'strong',
+	'sub',
+	'sup',
+	'time',
+	'u',
+	'var',
+	'wbr'
+]);
+
 /**
  * Render one Markdown block into the inner HTML for a marked element.
  *
@@ -91,6 +127,9 @@ function mergeStyles(
 	for (const c of content) {
 		if (!isElement(c)) continue;
 		const tag = c.name.toLowerCase();
+		// Inline formatting (em, a, code…) passes through; only structural
+		// elements are mapped onto — and required by — the placeholder.
+		if (INLINE.has(tag)) continue;
 		const tmpls = byTag.get(tag);
 		if (!tmpls || tmpls.length === 0) {
 			throw errAt(
