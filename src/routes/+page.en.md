@@ -31,3 +31,11 @@ Why teams reach for marte
 ---
 
 **Fails loud** — a mismatch breaks the build instead of shipping silently.
+
+---
+
+**Build-time, zero runtime** — no marte code ships to the browser.
+
+---
+
+**Repeat with one template** — this grid is a single component, fed eight blocks.

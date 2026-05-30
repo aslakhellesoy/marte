@@ -10,9 +10,9 @@
 
 <!--
 	The entire front page is driven by one Markdown file (+page.en.md / +page.no.md).
-	Every marker below — the data-marte attributes and the <!- - marte - -> comments
-	before each <FactBox> — is filled, in order, by a block from that file.
-	The locale switch is reactive: marte bakes one branch per locale.
+	data-marte attributes mark single elements; data-marte-each marks the grid,
+	whose FactBox template repeats once per Markdown block — 8 in English, 6 in
+	Norwegian. The locale switch is reactive: marte bakes one branch per locale.
 -->
 <div class="page">
 	<header class="topbar">
@@ -38,13 +38,13 @@
 
 	<section class="facts">
 		<h2 data-marte>Why teams reach for marte</h2>
-		<div class="grid">
-			<!-- marte --><FactBox>Design-time fact one</FactBox>
-			<!-- marte --><FactBox>Design-time fact two</FactBox>
-			<!-- marte --><FactBox>Design-time fact three</FactBox>
-			<!-- marte --><FactBox>Design-time fact four</FactBox>
-			<!-- marte --><FactBox>Design-time fact five</FactBox>
-			<!-- marte --><FactBox>Design-time fact six</FactBox>
+		<div class="grid" data-marte-each>
+			<!--
+				One FactBox template. The Markdown decides how many render: each ---
+				block below the fixed markers becomes a card, so English shows 8 and
+				Norwegian shows 6 — from the same component.
+			-->
+			<FactBox>Design-time fact</FactBox>
 		</div>
 	</section>
 

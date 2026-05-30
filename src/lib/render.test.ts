@@ -4,7 +4,7 @@ import { childNodes, collectMarkers, parseSvelte } from './svelte-ast.ts';
 
 // Resolve the first marked element's templates + tag from a .svelte snippet.
 function target(src: string) {
-	const node = collectMarkers(parseSvelte(src))[0];
+	const { node } = collectMarkers(parseSvelte(src))[0];
 	return { templates: childNodes(node), tag: String(node.name) };
 }
 

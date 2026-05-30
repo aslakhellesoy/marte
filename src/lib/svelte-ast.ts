@@ -28,8 +28,18 @@ type SvelteAttributeValue = {
 
 /** The attribute that marks an element as marte-managed. */
 export const MARKER_ATTR = 'data-marte';
+/** Marks a container whose single child element is a per-block repeated template. */
+export const MARKER_EACH_ATTR = 'data-marte-each';
 /** A leading comment `<!-- marte -->` / `<!-- @marte -->` also marks the next node. */
 const MARKER_COMMENT = /^\s*@?marte\s*$/;
+
+/**
+ * A resolved marker. `single` fills its node's inner content from one block;
+ * `each` repeats `template` (the container's sole child element) once per block.
+ */
+export type Marker =
+	| { readonly kind: 'single'; readonly node: SvelteNode }
+	| { readonly kind: 'each'; readonly node: SvelteNode; readonly template: SvelteNode };
 
 export function parseSvelte(source: string): SvelteNode[] {
 	type LooseAst = {
@@ -87,8 +97,8 @@ export function hasAttr(node: SvelteNode, attrName: string): boolean {
  * a type error). A marked element is NOT descended into: its whole inner content
  * belongs to its companion Markdown block.
  */
-export function collectMarkers(nodes: readonly SvelteNode[]): SvelteNode[] {
-	const out: SvelteNode[] = [];
+export function collectMarkers(nodes: readonly SvelteNode[]): Marker[] {
+	const out: Marker[] = [];
 	const walk = (list: readonly SvelteNode[]): void => {
 		let pending = false;
 		for (const n of list) {
@@ -102,8 +112,19 @@ export function collectMarkers(nodes: readonly SvelteNode[]): SvelteNode[] {
 				pending = false;
 				continue;
 			}
+			if (hasAttr(n, MARKER_EACH_ATTR)) {
+				const template = childNodes(n).find(isElement);
+				if (!template) {
+					throw new Error(
+						`marte: <${n.name} ${MARKER_EACH_ATTR}> needs exactly one child element to use as the repeated template`
+					);
+				}
+				out.push({ kind: 'each', node: n, template });
+				pending = false;
+				continue; // the child is the template, not a separate marker
+			}
 			if (pending || hasAttr(n, MARKER_ATTR)) {
-				out.push(n);
+				out.push({ kind: 'single', node: n });
 				pending = false;
 				continue; // do not descend into a marked element
 			}

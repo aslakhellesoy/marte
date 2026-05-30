@@ -9,11 +9,12 @@ export {
 	staticAttr,
 	innerRange,
 	leadingIndent,
-	MARKER_ATTR
+	MARKER_ATTR,
+	MARKER_EACH_ATTR
 } from './svelte-ast.ts';
-export type { SvelteNode, SvelteAttribute, Insert } from './svelte-ast.ts';
+export type { SvelteNode, SvelteAttribute, Insert, Marker } from './svelte-ast.ts';
 export { renderInner } from './render.ts';
-export { transformSvelteSource, checkSvelteSource } from './transform.ts';
+export { transformSvelteSource, checkSvelteSource, assignBlocks } from './transform.ts';
 export type { RuntimeConfig } from './transform.ts';
 export { generateMd, extractFromSource } from './extract.ts';
 export type { ExtractFileResult, ExtractOptions, GenerateMdResult } from './extract.ts';

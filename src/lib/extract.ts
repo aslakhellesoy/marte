@@ -271,7 +271,9 @@ export type GenerateMdResult = { md: string; svelte: string; markersAdded: numbe
 
 export function generateMd(svelteSrc: string, warnings: string[]): GenerateMdResult {
 	const nodes = parseSvelte(svelteSrc);
-	let targets = collectMarkers(nodes);
+	let targets: SvelteNode[] = collectMarkers(nodes).map((m) =>
+		m.kind === 'each' ? m.template : m.node
+	);
 	const inserts: Insert[] = [];
 
 	if (targets.length === 0) {

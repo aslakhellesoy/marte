@@ -111,6 +111,38 @@ baked at build time, Svelte's **scoped CSS applies to the generated content**
 just like hand-written markup. If the Markdown structure can't be mapped onto the
 placeholder (e.g. a paragraph where a list is expected), that's a hard error.
 
+## Repeating a region
+
+Let the Markdown decide *how many* elements render. Mark a container with
+`data-marte-each` and give it one child as the template — it repeats once per
+block:
+
+```svelte
+<div class="cards" data-marte-each>
+	<FactBox>placeholder</FactBox>
+</div>
+```
+
+```markdown
+First fact
+
+---
+
+Second fact
+
+---
+
+Third fact
+```
+
+→ three `<FactBox>`es. The fixed markers each take one block and the repeatable
+region takes the remainder, so the count can differ per locale (e.g. eight cards
+in `+page.en.md`, six in `+page.no.md`) with no parity errors. The Markdown stays
+ordinary `---`-separated blocks — no group dividers to corrupt.
+
+A file has **one** repeatable region at most; for a second grid, give it its own
+component and Markdown companion (marte composes per component).
+
 ## Install
 
 ```sh

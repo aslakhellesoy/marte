@@ -75,3 +75,44 @@ describe('checkSvelteSource', () => {
 		);
 	});
 });
+
+describe('transformSvelteSource — repeatable regions (data-marte-each)', () => {
+	const each = '<div data-marte-each>\n\t<Item>placeholder</Item>\n</div>\n';
+	const count = (s: string, re: RegExp) => (s.match(re) ?? []).length;
+
+	test('repeats the template once per block (remainder rule)', () => {
+		const out = transformSvelteSource(each, { '': 'One\n---\nTwo\n---\nThree\n' }, SINGLE, 'f');
+		expect(count(out, /<Item>/g)).toBe(3);
+		expect(out).toContain('One');
+		expect(out).toContain('Three');
+		expect(out).not.toContain('placeholder');
+	});
+
+	test('fixed markers take one block each; the each region takes the remainder', () => {
+		const out = transformSvelteSource(
+			`<h1 data-marte>t</h1>\n${each}`,
+			{ '': 'Title\n---\nA\n---\nB\n---\nC\n' },
+			SINGLE,
+			'f'
+		);
+		expect(out).toContain('Title');
+		expect(count(out, /<Item>/g)).toBe(3);
+	});
+
+	test('i18n: each locale renders its own instance count', () => {
+		const out = transformSvelteSource(
+			each,
+			{ en: 'A\n---\nB\n---\nC\n', no: 'X\n---\nY\n' },
+			I18N,
+			'f'
+		);
+		expect(count(out, /<Item>/g)).toBe(5); // 3 (en) + 2 (no), each behind its branch
+		expect(out).toContain('{#if getLocale() === "en"}');
+	});
+
+	test('two repeatable regions in one file fail with guidance to split components', () => {
+		expect(() =>
+			transformSvelteSource(`${each}${each}`, { '': 'A\n---\nB\n---\nC\n' }, SINGLE, 'f')
+		).toThrow(/one repeatable region/);
+	});
+});
