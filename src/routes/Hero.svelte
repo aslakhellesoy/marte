@@ -1,18 +1,25 @@
 <!--
 	This component holds the *design* — layout, classes, structure. The prose is
 	authored in the sibling Markdown companions (Hero.en.md / Hero.no.md) and
-	injected by the marte Vite plugin at build time. The text below is just a
-	design-time preview; marte replaces it with the Markdown content.
+	injected by the marte plugin at build time. The text below is a design-time
+	preview; marte replaces the inner content of each marked element.
+
+	Markers: `data-marte` on an element, or `<!-- marte -->` before one.
 -->
 <section class="hero">
-	<h1>Markdown ⇄ Svelte</h1>
-	<p>This paragraph is a design-time placeholder, replaced by Markdown.</p>
+	<h1 data-marte>Design-time heading</h1>
+	<p data-marte>Design-time tagline, replaced by Markdown.</p>
 </section>
 
 <section class="features">
-	<h2 data-marte="features-title">Why marte</h2>
-	<p>First feature placeholder.</p>
-	<p>Second feature placeholder.</p>
+	<h2 data-marte>Features</h2>
+
+	<!-- A bullet list re-skinned from Markdown: the <li> templates' classes are
+	     copied (and cycled) onto however many bullets the Markdown provides. -->
+	<ul data-marte class="cards">
+		<li class="card odd">First feature placeholder</li>
+		<li class="card even">Second feature placeholder</li>
+	</ul>
 </section>
 
 <style>
@@ -31,8 +38,23 @@
 		padding-top: 1.5rem;
 	}
 
-	.features :global(h2) {
-		font-size: 1.25rem;
-		margin: 0 0 0.5rem;
+	.cards {
+		list-style: none;
+		padding: 0;
+		display: grid;
+		gap: 0.75rem;
+	}
+
+	.card {
+		padding: 0.75rem 1rem;
+		border-radius: 0.5rem;
+	}
+
+	.card.odd {
+		background: #f4f4f5;
+	}
+
+	.card.even {
+		background: #e0e7ff;
 	}
 </style>
