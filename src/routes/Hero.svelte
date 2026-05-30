@@ -1,11 +1,12 @@
 <!--
-	This component holds the *design* — layout, classes, structure. The prose is
+	This component holds the design — layout, classes, structure. The prose is
 	authored in the sibling Markdown companions (Hero.en.md / Hero.no.md) and
 	injected by the marte plugin at build time. The text below is a design-time
 	preview; marte replaces the inner content of each marked element.
 
-	Markers: `data-marte` on an element, or `<!-- marte -->`
-before one. -->
+	Mark an element with a data-marte attribute, or a marte comment placed
+	immediately before it.
+-->
 <section class="hero">
 	<h1 data-marte>Design-time heading</h1>
 	<p data-marte>Design-time tagline, replaced by Markdown.</p>
