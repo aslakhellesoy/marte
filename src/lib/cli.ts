@@ -1,10 +1,8 @@
 import { readFileSync, writeFileSync } from 'node:fs';
-import { applyEdits, resolveBlocks } from './apply.ts';
 import { SyncError } from './errors.ts';
 import { extractFromSource } from './extract.ts';
 import { fileExists, findPairs, resolveExtractTargets } from './files.ts';
-import { parseMarkdownBlocks } from './markdown.ts';
-import { parseSvelte } from './svelte-ast.ts';
+import { checkSvelteSource, transformSvelteSource } from './transform.ts';
 
 type CliArgs = {
 	_: string[];
@@ -14,8 +12,6 @@ type CliArgs = {
 	force?: boolean;
 	dry?: boolean;
 };
-
-const DEFAULT_LOCALE = 'no';
 
 function parseArgs(argv: readonly string[]): CliArgs {
 	const args: CliArgs = { _: [] };
@@ -32,16 +28,17 @@ function parseArgs(argv: readonly string[]): CliArgs {
 
 const USAGE =
 	'usage:\n' +
-	'  marte check  [--dir src] [--locale no | --ext .md]\n' +
-	'  marte apply  [--dir src] [--locale no | --ext .md]\n' +
-	'  marte extract <file|dir|glob> [--locale no | --ext .md] [--force] [--dry]\n' +
+	'  marte check   [--dir src] [--locale en | --ext .md]\n' +
+	'  marte apply   [--dir src] [--locale en | --ext .md]\n' +
+	'  marte extract <file|dir|glob> [--locale en | --ext .md] [--force] [--dry]\n' +
 	'\n' +
-	'  --locale L  sets ext to ".L.md" (default: no). Use --ext to override.';
+	'  Default companion extension is ".md". --locale L sets it to ".L.md".';
 
+// Single-locale by default (Foo.md). --locale L => Foo.L.md; --ext overrides.
 function pickExt(args: CliArgs): string {
 	if (args.ext) return args.ext;
-	const locale = args.locale ?? DEFAULT_LOCALE;
-	return `.${locale}.md`;
+	if (args.locale) return `.${args.locale}.md`;
+	return '.md';
 }
 
 export function runCli(argv: readonly string[]): never {
@@ -54,12 +51,8 @@ export function runCli(argv: readonly string[]): never {
 		console.error(USAGE);
 		process.exit(2);
 	}
-
-	if (cmd === 'extract') {
-		runExtract(args, ext);
-	} else {
-		runCheckOrApply(cmd, dir, ext);
-	}
+	if (cmd === 'extract') runExtract(args, ext);
+	else runCheckOrApply(cmd, dir, ext);
 	process.exit(0);
 }
 
@@ -91,9 +84,7 @@ function runExtract(args: CliArgs, ext: string): void {
 			if (args.dry) {
 				console.log(`--- ${result.mdFile}\n${result.md}`);
 				if (result.svelteChanged) {
-					console.error(
-						`  (would add ${result.anchors} data-marte anchor${result.anchors === 1 ? '' : 's'} to ${file})`
-					);
+					console.error(`  (would add ${result.markersAdded} data-marte marker(s) to ${file})`);
 				}
 			} else {
 				writeFileSync(result.mdFile, result.md);
@@ -101,15 +92,12 @@ function runExtract(args: CliArgs, ext: string): void {
 				console.log(`✎ wrote ${result.mdFile}`);
 				if (result.svelteChanged) {
 					writeFileSync(file, result.svelte);
-					console.log(
-						`✎ added ${result.anchors} data-marte anchor${result.anchors === 1 ? '' : 's'} to ${file}`
-					);
+					console.log(`✎ added ${result.markersAdded} data-marte marker(s) to ${file}`);
 				}
 			}
-			if (result.verified) {
-				console.log(`✓ verified: round-trips cleanly against ${file}`);
-			} else {
-				console.error(`⚠ ${file}: generated file does not resolve yet — ${result.verifyMsg}`);
+			if (result.verified) console.log(`✓ verified against ${file}`);
+			else {
+				console.error(`⚠ ${file}: does not resolve yet — ${result.verifyMsg}`);
 				unverified++;
 			}
 		} catch (e) {
@@ -124,8 +112,7 @@ function runExtract(args: CliArgs, ext: string): void {
 				continue;
 			}
 			failed++;
-			const msg = e instanceof Error ? e.message : String(e);
-			console.error(`✗ ${file} — ${msg}`);
+			console.error(`✗ ${file} — ${e instanceof Error ? e.message : String(e)}`);
 		}
 	}
 	if (files.length > 1 || skipped || failed || unverified) {
@@ -148,17 +135,15 @@ function runCheckOrApply(cmd: 'check' | 'apply', dir: string, ext: string): void
 		try {
 			const svelteSrc = readFileSync(pair.svelte, 'utf8');
 			const mdSrc = readFileSync(pair.md, 'utf8');
-			const blocks = parseMarkdownBlocks(mdSrc, pair.md);
-			const scopeNodes = parseSvelte(svelteSrc);
-			const edits = resolveBlocks(blocks, scopeNodes, svelteSrc, pair.md, null);
-			const next = applyEdits(svelteSrc, edits);
 			if (cmd === 'check') {
-				console.log(`✓ ${pair.svelte}  (${edits.length} target${edits.length === 1 ? '' : 's'})`);
+				const n = checkSvelteSource(svelteSrc, mdSrc, pair.md);
+				console.log(`✓ ${pair.svelte}  (${n} marker${n === 1 ? '' : 's'})`);
 			} else {
+				const next = transformSvelteSource(svelteSrc, { '': mdSrc }, { i18n: false }, pair.md);
 				if (next !== svelteSrc) {
 					writeFileSync(pair.svelte, next);
 					changed++;
-					console.log(`✎ ${pair.svelte}  (${edits.length} target${edits.length === 1 ? '' : 's'})`);
+					console.log(`✎ ${pair.svelte}`);
 				} else {
 					console.log(`· ${pair.svelte}  (up to date)`);
 				}
@@ -166,10 +151,7 @@ function runCheckOrApply(cmd: 'check' | 'apply', dir: string, ext: string): void
 		} catch (e) {
 			failed++;
 			if (e instanceof SyncError) console.error(`✗ ${e.message}`);
-			else {
-				const msg = e instanceof Error ? e.message : String(e);
-				console.error(`✗ ${pair.svelte} — ${msg}`);
-			}
+			else console.error(`✗ ${pair.svelte} — ${e instanceof Error ? e.message : String(e)}`);
 		}
 	}
 	if (failed) {

@@ -1,57 +1,40 @@
 import { describe, expect, test } from 'vitest';
 import { extractFromSource, generateMd } from './extract.ts';
 
-describe('generateMd', () => {
-	test('serializes static container content as a single block of markdown', () => {
-		const svelte = '<section>\n  <h1>Hello</h1>\n  <p>World</p>\n</section>\n';
-		const { md } = generateMd(svelte, 'f.md', []);
-		expect(md).toContain(':::section');
+describe('generateMd — bootstrap (no markers yet)', () => {
+	test('marks the outermost static element and serializes its content', () => {
+		const svelte = '<section>\n\t<h1>Hello</h1>\n\t<p>World</p>\n</section>\n';
+		const { md, svelte: out, markersAdded } = generateMd(svelte, []);
+		expect(out).toContain('<section data-marte>');
 		expect(md).toContain('# Hello');
 		expect(md).toContain('World');
+		expect(markersAdded).toBe(1);
 	});
 
-	test('serializes a sibling h1 and h2 inside a non-container parent', () => {
-		const svelte = '<header>\n  <h1>Title</h1>\n</header>\n<p>Body</p>\n';
-		const { md } = generateMd(svelte, 'f.md', []);
-		expect(md).toContain('# Title');
-		expect(md).toContain(':::p inline');
-		expect(md).toContain('Body');
+	test('separates multiple markers with ---', () => {
+		// Two top-level elements with no wrapper are marked as separate leaf
+		// markers, serialized inline and joined by a --- separator.
+		const svelte = '<h1>One</h1>\n<p>Two</p>\n';
+		const { md } = generateMd(svelte, []);
+		expect(md).toContain('One');
+		expect(md).toContain('\n---\n');
+		expect(md).toContain('Two');
 	});
+});
 
-	test('walks into Svelte components for static prose', () => {
-		const svelte = `<Card>
-  <h3>Title</h3>
-  <p>Body</p>
-</Card>
-`;
-		const { md } = generateMd(svelte, 'f.md', []);
-		expect(md).toContain('Title');
-		expect(md).toContain('Body');
+describe('generateMd — existing markers', () => {
+	test('serializes each marked element in order, leaving the source unchanged', () => {
+		const svelte = '<h1 data-marte>A</h1>\n<p data-marte>B</p>\n';
+		const { md, markersAdded } = generateMd(svelte, []);
+		// Marked leaf elements serialize their inner text positionally.
+		expect(md.trim()).toBe('A\n\n---\n\nB');
+		expect(markersAdded).toBe(0);
 	});
+});
 
-	test('skips {#snippet} contents and flags them as dynamic', () => {
-		const svelte = `<section>
-  <h1>Heading</h1>
-  {#snippet card(title)}<h3>{title}</h3>{/snippet}
-</section>
-`;
-		const warnings: string[] = [];
-		const { md } = generateMd(svelte, 'f.md', warnings);
-		expect(md).toContain('Heading');
-		expect(md).not.toContain(':::h3');
-		expect(warnings.some((w) => w.includes('SnippetBlock'))).toBe(true);
-	});
-
-	test('round-trips: extract → apply → extract yields the same markdown', () => {
-		const svelte = `<section>
-  <h1>Hello</h1>
-  <p data-marte="lead">A paragraph</p>
-  <Card>
-    <h3>Card title</h3>
-    <p>Card body</p>
-  </Card>
-</section>
-`;
+describe('extractFromSource', () => {
+	test('round-trips: the generated markdown verifies against the marked source', () => {
+		const svelte = '<section>\n\t<h1>Hello</h1>\n\t<p>A paragraph</p>\n</section>\n';
 		const result = extractFromSource('f.svelte', svelte, 'f.md', { dry: true });
 		expect(result.verified).toBe(true);
 		expect(result.verifyMsg).toBe('');

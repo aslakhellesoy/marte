@@ -1,31 +1,22 @@
-import { applyEdits, type Edit } from './apply.ts';
 import { errAt } from './errors.ts';
-import { parseMarkdownBlocks, type MarkdownBlock } from './markdown.ts';
+import { parseBlocks, type Block } from './markdown.ts';
+import { renderInner } from './render.ts';
 import {
 	childNodes,
-	findMatches,
+	collectMarkers,
 	innerRange,
 	leadingIndent,
-	parseSelector,
-	parseSvelte,
-	type SvelteNode
+	parseSvelte
 } from './svelte-ast.ts';
 
-export type ResolvedTarget = {
-	readonly node: SvelteNode;
-	readonly key: string;
-	readonly inline: boolean;
-};
-
 /**
- * How the transformed component should obtain its content at runtime.
+ * How a transformed component reads its content.
  *
- * - `{ i18n: false }` — single-locale: the virtual `marteContent` is the
- *   selector map directly and no locale accessor is imported.
- * - `{ i18n: true, ... }` — multi-locale: the virtual `marteContent` is keyed
- *   by locale. `importStatement` brings a `getLocale`-style accessor into
- *   scope, and `expression` (e.g. `getLocale()`) selects the active locale at
- *   render time, falling back to `baseLocale`.
+ * - `{ i18n: false }` — single locale: the styled Markdown is baked directly
+ *   into the component markup (so Svelte's scoped CSS applies to it).
+ * - `{ i18n: true, … }` — multi-locale: every locale is baked behind an
+ *   `{#if <expression> === '<locale>'}` branch; `importStatement` brings the
+ *   locale accessor into scope.
  */
 export type RuntimeConfig =
 	| { readonly i18n: false }
@@ -36,109 +27,131 @@ export type RuntimeConfig =
 			readonly expression: string;
 	  };
 
-const VIRTUAL_IMPORT = `import { marteContent as __marteContent } from 'virtual:marte';`;
+type Edit = { readonly start: number; readonly end: number; readonly replacement: string };
 
-/**
- * Walk the parsed marte block tree against the .svelte AST scope nodes, resolve
- * each leaf block's selector to its target element and return a flat list of
- * `{ node, key, inline }` triples. Keys mirror `walkLeaves` so the load and
- * transform paths agree byte-for-byte.
- */
-export function resolveTargets(
-	blocks: readonly MarkdownBlock[],
-	scopeNodes: readonly SvelteNode[],
-	file: string,
-	prefix: string
-): ResolvedTarget[] {
-	const out: ResolvedTarget[] = [];
-	const counts = new Map<string, number>();
-	const firstLineFor = new Map<string, number>();
-	for (const b of blocks) {
-		if (!b.selector) continue;
-		counts.set(b.selector, (counts.get(b.selector) ?? 0) + 1);
-		if (!firstLineFor.has(b.selector)) firstLineFor.set(b.selector, b.line);
-	}
-
-	const matchesPerSelector = new Map<string, SvelteNode[]>();
-	for (const [selector, expected] of counts) {
-		const parsed = parseSelector(selector, file, firstLineFor.get(selector) ?? 0);
-		const matches = findMatches([...scopeNodes], parsed);
-		if (matches.length !== expected) {
-			throw errAt(
-				file,
-				firstLineFor.get(selector) ?? 0,
-				`selector \`${selector}\` matches ${matches.length} element(s) but the markdown has ${expected} block(s)` +
-					` — give the element(s) a data-marte="name" (then address \`:::@name\`) or an id to disambiguate`
-			);
-		}
-		matchesPerSelector.set(selector, matches);
-	}
-
-	const seen = new Map<string, number>();
-	for (const b of blocks) {
-		if (!b.selector) continue;
-		const total = counts.get(b.selector) ?? 1;
-		const i = seen.get(b.selector) ?? 0;
-		seen.set(b.selector, i + 1);
-		const node = matchesPerSelector.get(b.selector)![i];
-		const indexed = total > 1 ? `${b.selector}[${i}]` : b.selector;
-		const key = prefix ? `${prefix}/${indexed}` : indexed;
-		if (b.children.length) {
-			out.push(...resolveTargets(b.children, childNodes(node), file, key));
-		} else {
-			out.push({ node, key, inline: b.inline });
-		}
-	}
-	return out;
+/** The locales to bake, base first. Single-locale uses the one sentinel key ''. */
+function localeOrder(runtime: RuntimeConfig, mdByLocale: Record<string, string>): string[] {
+	if (!runtime.i18n) return [''];
+	const others = Object.keys(mdByLocale).filter((l) => l !== runtime.baseLocale);
+	return [runtime.baseLocale, ...others];
 }
 
 /**
- * Rewrite a .svelte source so every element targeted by the companion markdown
- * reads its inner content from the virtual map at render time. The hardcoded
- * design-preview text in the source is replaced. Injects the runtime imports
- * and a `__marte` const at the top of the script.
+ * Rewrite a `.svelte` source so each marker's inner content comes from its
+ * companion Markdown block, re-skinned onto the placeholder markup. `mdByLocale`
+ * maps each locale to its Markdown source (single-locale uses the key '').
  */
 export function transformSvelteSource(
 	svelteSource: string,
-	mdSource: string,
-	mdPath: string,
-	runtime: RuntimeConfig
+	mdByLocale: Record<string, string>,
+	runtime: RuntimeConfig,
+	file: string
 ): string {
-	const blocks = parseMarkdownBlocks(mdSource, mdPath);
 	const nodes = parseSvelte(svelteSource);
-	const targets = resolveTargets(blocks, nodes, mdPath, '');
-	if (!targets.length) return svelteSource;
+	const markers = collectMarkers(nodes);
+	if (markers.length === 0) return svelteSource;
 
-	const edits: Edit[] = targets.map((t) => buildReplacementEdit(t, svelteSource));
-	const replaced = applyEdits(svelteSource, edits);
-	return injectMarteRuntime(replaced, runtime);
+	const locales = localeOrder(runtime, mdByLocale);
+	const blocksByLocale: Record<string, Block[]> = {};
+	for (const locale of locales) {
+		const blocks = parseBlocks(mdByLocale[locale] ?? '');
+		if (blocks.length !== markers.length) {
+			throw errAt(
+				file,
+				null,
+				`${labelLocale(locale)}has ${blocks.length} content block(s) but the component has ` +
+					`${markers.length} marker(s) — they must match one-to-one`
+			);
+		}
+		blocksByLocale[locale] = blocks;
+	}
+
+	const edits: Edit[] = markers.map((node, i) => {
+		const templates = childNodes(node);
+		const tag = String(node.name);
+		const [start, end] = innerRange(node, svelteSource);
+		const indent = leadingIndent(svelteSource, node.start ?? start);
+
+		const perLocale = locales.map((locale) => ({
+			locale,
+			html: renderInner(
+				blocksByLocale[locale][i].raw,
+				templates,
+				tag,
+				file,
+				blocksByLocale[locale][i].line
+			)
+		}));
+
+		const replacement = runtime.i18n
+			? i18nBranches(perLocale, runtime, indent)
+			: `\n${indent}\t${perLocale[0].html}\n${indent}`;
+		return { start, end, replacement };
+	});
+
+	let out = applyEdits(svelteSource, edits);
+	if (runtime.i18n) out = injectScript(out, runtime.importStatement);
+	return out;
 }
 
-function buildReplacementEdit(target: ResolvedTarget, source: string): Edit {
-	const [start, end] = innerRange(target.node, source);
-	const elementStart = target.node.start ?? start;
-	const indent = leadingIndent(source, elementStart);
-	const expr = `{@html __marte[${JSON.stringify(target.key)}].html}`;
-	const replacement = `\n${indent}  ${expr}\n${indent}`;
-	return { start, end, replacement };
+function i18nBranches(
+	perLocale: { locale: string; html: string }[],
+	runtime: Extract<RuntimeConfig, { i18n: true }>,
+	indent: string
+): string {
+	const pad = `\n${indent}\t`;
+	const parts: string[] = [];
+	perLocale.forEach(({ locale, html }, i) => {
+		const head =
+			i === 0
+				? `{#if ${runtime.expression} === ${JSON.stringify(locale)}}`
+				: i === perLocale.length - 1
+					? `{:else}`
+					: `{:else if ${runtime.expression} === ${JSON.stringify(locale)}}`;
+		parts.push(`${pad}${head}${pad}\t${html}`);
+	});
+	parts.push(`${pad}{/if}`);
+	return parts.join('') + `\n${indent}`;
 }
 
-function injectMarteRuntime(source: string, runtime: RuntimeConfig): string {
-	const lines = runtime.i18n
-		? [
-				runtime.importStatement,
-				VIRTUAL_IMPORT,
-				`const __marte = __marteContent[${runtime.expression}] ?? __marteContent[${JSON.stringify(
-					runtime.baseLocale
-				)}];`
-			]
-		: [VIRTUAL_IMPORT, `const __marte = __marteContent;`];
-	const block = `\n\t${lines.join('\n\t')}\n`;
+function injectScript(source: string, importStatement: string): string {
+	const block = `\n\t${importStatement}\n`;
 	const scriptOpen = source.match(/<script(?:\s[^>]*)?>/);
 	if (!scriptOpen || scriptOpen.index == null) {
-		// No script block — synthesize one at the top.
 		return `<script lang="ts">${block}</script>\n\n${source}`;
 	}
 	const insertAt = scriptOpen.index + scriptOpen[0].length;
 	return source.slice(0, insertAt) + block + source.slice(insertAt);
+}
+
+function applyEdits(source: string, edits: readonly Edit[]): string {
+	let out = source;
+	for (const e of [...edits].sort((a, b) => b.start - a.start)) {
+		out = out.slice(0, e.start) + e.replacement + out.slice(e.end);
+	}
+	return out;
+}
+
+function labelLocale(locale: string): string {
+	return locale ? `locale '${locale}' ` : 'the Markdown companion ';
+}
+
+/**
+ * Validate a single-locale pairing without writing: throws on marker/block
+ * count mismatch or structural mismatch, and returns the marker count.
+ */
+export function checkSvelteSource(svelteSource: string, mdSource: string, file: string): number {
+	const markers = collectMarkers(parseSvelte(svelteSource));
+	const blocks = parseBlocks(mdSource);
+	if (blocks.length !== markers.length) {
+		throw errAt(
+			file,
+			null,
+			`${blocks.length} content block(s) but ${markers.length} marker(s) — they must match one-to-one`
+		);
+	}
+	markers.forEach((node, i) => {
+		renderInner(blocks[i].raw, childNodes(node), String(node.name), file, blocks[i].line);
+	});
+	return markers.length;
 }
