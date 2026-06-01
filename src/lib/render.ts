@@ -64,13 +64,17 @@ const INLINE = new Set([
 /**
  * Render one Markdown block into the inner HTML for a marked element.
  *
- * - A *leaf* placeholder (no child elements — e.g. `<h1>`, `<p>`, `<span>`)
- *   receives inline-rendered Markdown, so no stray `<p>` wrapper is added.
- * - A *container* placeholder (e.g. `<ul>` with `<li>`s, a card with heading +
- *   text) receives block-rendered Markdown, re-skinned onto the placeholder:
- *   `class`/`style` are copied recursively from the template structure, cycling
- *   through sibling templates of the same tag for repeated items. A rendered
- *   element with no matching placeholder tag is a hard error.
+ * - A *container* placeholder (element children — e.g. `<ul>` with `<li>`s, a
+ *   card with heading + text) receives block-rendered Markdown, re-skinned onto
+ *   the placeholder: `class`/`style` are copied recursively from the template
+ *   structure, cycling through sibling templates of the same tag for repeated
+ *   items. A rendered element with no matching placeholder tag is a hard error.
+ * - A *Svelte component* placeholder (uppercase tag — e.g. `<FactBox>`)
+ *   receives block-rendered Markdown so headings, lists, etc. work; a lone
+ *   wrapping `<p>` is unwrapped so simple inline blocks still slot cleanly.
+ * - An *HTML leaf* placeholder (lowercase tag with no element children —
+ *   `<h1>`, `<p>`, `<span>`) receives inline-rendered Markdown, since block
+ *   syntax like `## heading` would be invalid nested inside those elements.
  */
 export function renderInner(
 	blockRaw: string,
@@ -82,17 +86,22 @@ export function renderInner(
 	const text = blockRaw.trim();
 	if (text === '') return '';
 
-	if (!hasElementChild(templates)) {
-		const html = marked.parseInline(text);
-		return escapeBraces(typeof html === 'string' ? html : '').trim();
+	if (hasElementChild(templates)) {
+		let rendered = escapeBraces((marked.parse(text) as string).trim());
+		rendered = unwrapMatching(rendered, markedTag);
+
+		const inserts: Insert[] = [];
+		mergeStyles(parseSvelte(rendered), templates, inserts, file, line);
+		return applyInserts(rendered, inserts).trim();
 	}
 
-	let rendered = escapeBraces((marked.parse(text) as string).trim());
-	rendered = unwrapMatching(rendered, markedTag);
+	if (/^[A-Z]/.test(markedTag)) {
+		const html = escapeBraces((marked.parse(text) as string).trim());
+		return unwrapMatching(html, 'p');
+	}
 
-	const inserts: Insert[] = [];
-	mergeStyles(parseSvelte(rendered), templates, inserts, file, line);
-	return applyInserts(rendered, inserts).trim();
+	const html = marked.parseInline(text);
+	return escapeBraces(typeof html === 'string' ? html : '').trim();
 }
 
 // When the marked element is itself a list/container tag (e.g. `<ul>`), the
