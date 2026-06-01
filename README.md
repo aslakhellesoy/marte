@@ -1,8 +1,8 @@
 # malte
 
-**Two-way sync between MARkdown and svelTE.**
+**Two-way sync between Markdown and Svelte.**
 
-Keep your page _copy_ in Markdown. Keep your _design_ in Svelte. `malte` injects
+Keep your page _copy_ in Markdown and your _design_ in Svelte. `malte` injects
 the Markdown into your components at build time, so the text you read and edit
 lives in one clean, ordered file — while your layout, classes and styles stay
 untouched.
