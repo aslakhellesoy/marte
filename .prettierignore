@@ -3,6 +3,7 @@ dist
 build
 node_modules
 pnpm-lock.yaml
+.claude
 
 # Markdown companion files use malte's `:::` fences, which Prettier would
 # reformat. Keep all Markdown out of Prettier's reach.

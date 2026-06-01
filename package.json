@@ -16,6 +16,10 @@
 		"type": "git",
 		"url": "git+https://github.com/aslakhellesoy/malte.git"
 	},
+	"homepage": "https://github.com/aslakhellesoy/malte#readme",
+	"bugs": {
+		"url": "https://github.com/aslakhellesoy/malte/issues"
+	},
 	"type": "module",
 	"packageManager": "pnpm@10.33.0",
 	"engines": {
@@ -26,6 +30,9 @@
 	],
 	"bin": {
 		"malte": "./dist/bin.js"
+	},
+	"publishConfig": {
+		"access": "public"
 	},
 	"exports": {
 		".": {
@@ -49,20 +56,18 @@
 		"lint": "prettier --check . && eslint .",
 		"format": "prettier --write .",
 		"malte": "node --experimental-strip-types ./src/lib/bin.ts",
-		"changeset": "changeset",
-		"version": "changeset version",
-		"release": "pnpm build:lib && changeset publish"
+		"release": "release-it"
 	},
 	"dependencies": {
 		"marked": "^18.0.4"
 	},
 	"peerDependencies": {
 		"svelte": "^5",
-		"vite": "^5 || ^6 || ^7 || ^8"
+		"vite": "^8"
 	},
 	"devDependencies": {
-		"@changesets/cli": "^2.31.0",
 		"@eslint/js": "^10.0.1",
+		"@release-it/conventional-changelog": "^11.0.1",
 		"@sveltejs/adapter-static": "^3.0.10",
 		"@sveltejs/kit": "^2.61.1",
 		"@sveltejs/vite-plugin-svelte": "^7.1.2",
@@ -73,6 +78,7 @@
 		"globals": "^17.6.0",
 		"prettier": "^3.8.3",
 		"prettier-plugin-svelte": "^4.0.1",
+		"release-it": "^20.2.0",
 		"svelte": "^5.56.0",
 		"svelte-check": "^4.4.8",
 		"typescript": "^6.0.3",
