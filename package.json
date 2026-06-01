@@ -1,5 +1,5 @@
 {
-	"name": "malte",
+	"name": "@oselvar/malte",
 	"version": "0.0.0",
 	"description": "A Vite plugin that syncs static content between Svelte components and sibling Markdown files at build time.",
 	"keywords": [
@@ -14,11 +14,11 @@
 	"author": "Aslak Hellesøy",
 	"repository": {
 		"type": "git",
-		"url": "git+https://github.com/aslakhellesoy/malte.git"
+		"url": "git+https://github.com/oselvar/malte.git"
 	},
-	"homepage": "https://github.com/aslakhellesoy/malte#readme",
+	"homepage": "https://github.com/oselvar/malte#readme",
 	"bugs": {
-		"url": "https://github.com/aslakhellesoy/malte/issues"
+		"url": "https://github.com/oselvar/malte/issues"
 	},
 	"type": "module",
 	"packageManager": "pnpm@10.33.0",

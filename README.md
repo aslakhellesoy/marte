@@ -146,7 +146,7 @@ component and Markdown companion (malte composes per component).
 ## Install
 
 ```sh
-pnpm add -D vite-plugin-malte
+pnpm add -D @oselvar/malte
 ```
 
 Add it to `vite.config.ts` **before** the Svelte plugin:
@@ -154,7 +154,7 @@ Add it to `vite.config.ts` **before** the Svelte plugin:
 ```ts
 import { sveltekit } from '@sveltejs/kit/vite';
 import { defineConfig } from 'vite';
-import { malte } from 'vite-plugin-malte';
+import { malte } from '@oselvar/malte';
 
 export default defineConfig({
 	plugins: [malte(), sveltekit()]

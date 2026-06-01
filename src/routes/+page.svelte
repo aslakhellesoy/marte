@@ -31,8 +31,8 @@
 		<h1 data-malte>Design-time heading</h1>
 		<p class="tagline" data-malte>Design-time tagline, replaced by Markdown.</p>
 		<div class="cta">
-			<a class="btn" href="https://github.com/aslakhellesoy/malte">View on GitHub</a>
-			<code class="install">pnpm add -D vite-plugin-malte</code>
+			<a class="btn" href="https://github.com/oselvar/malte">View on GitHub</a>
+			<code class="install">pnpm add -D @oselvar/malte</code>
 		</div>
 	</section>
 
