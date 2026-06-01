@@ -97,4 +97,24 @@ describe('marte vite plugin — i18n', () => {
 			rmSync(dir, { recursive: true, force: true });
 		}
 	});
+
+	test('does not watch absent companion paths', async () => {
+		// Regression: SvelteKit's `.svelte-kit/generated/root.svelte` has no
+		// companions. Watching `root.en.md` registered it as an `_addedImport`
+		// in Vite ≥8, and import-analysis failed to resolve the non-existent
+		// file, crashing the dev server on the front page.
+		const dir = mkdtempSync(join(tmpdir(), 'marte-'));
+		try {
+			const sveltePath = join(dir, 'root.svelte');
+			const code = '<div>x</div>\n';
+			writeFileSync(sveltePath, code);
+			const plugin = marte({ locales: ['en', 'no'], baseLocale: 'en', runtimeLocale: RUNTIME });
+			const { result, watched } = await runTransform(plugin, dir, sveltePath, code);
+			expect(result).toBeNull();
+			expect(watched).not.toContain(join(dir, 'root.en.md'));
+			expect(watched).not.toContain(join(dir, 'root.no.md'));
+		} finally {
+			rmSync(dir, { recursive: true, force: true });
+		}
+	});
 });

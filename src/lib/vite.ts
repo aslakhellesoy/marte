@@ -100,9 +100,14 @@ export function marte(options: MarteOptions = {}): Plugin {
 }
 
 /**
- * Read the Markdown companion(s) for a `.svelte` file, registering them (even
- * when absent) as watched so creating one later triggers a reload. Returns null
- * when the file is not marte-managed (no base companion).
+ * Read the Markdown companion(s) for a `.svelte` file. Only existing companions
+ * are registered with `addWatchFile` — Vite ≥8's `TransformPluginContext`
+ * treats every watched path as an `_addedImport` and runs it through import
+ * resolution, which fails on absent files (e.g. `.svelte-kit/generated/root.en.md`
+ * for SvelteKit's generated root). The dev server's chokidar watcher already
+ * covers the project tree, so newly created companions still fire
+ * `handleHotUpdate` and trigger a reload. Returns null when the file is not
+ * marte-managed (no base companion).
  */
 async function readCompanions(
 	sveltePath: string,
@@ -114,8 +119,8 @@ async function readCompanions(
 
 	if (!resolved.i18n) {
 		const mdPath = join(dir, `${base}.md`);
-		watch(mdPath);
 		if (!(await fileExists(mdPath))) return null;
+		watch(mdPath);
 		return { '': await readFile(mdPath, 'utf8') };
 	}
 
@@ -124,8 +129,8 @@ async function readCompanions(
 	const missing: string[] = [];
 	for (const locale of resolved.locales) {
 		const mdPath = join(dir, `${base}.${locale}.md`);
-		watch(mdPath);
 		if (await fileExists(mdPath)) {
+			watch(mdPath);
 			out[locale] = await readFile(mdPath, 'utf8');
 			present.push(locale);
 		} else {
