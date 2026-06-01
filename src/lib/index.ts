@@ -18,6 +18,6 @@ export { transformSvelteSource, checkSvelteSource, assignBlocks } from './transf
 export type { RuntimeConfig } from './transform.ts';
 export { generateMd, extractFromSource } from './extract.ts';
 export type { ExtractFileResult, ExtractOptions, GenerateMdResult } from './extract.ts';
-export { marte } from './vite.ts';
+export { malte } from './vite.ts';
 export type { MarteOptions, RuntimeLocale } from './vite.ts';
 export { runCli } from './cli.ts';

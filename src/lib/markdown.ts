@@ -1,4 +1,4 @@
-// marte's Markdown format is deliberately plain: a file is a sequence of content
+// malte's Markdown format is deliberately plain: a file is a sequence of content
 // blocks separated by a thematic break (`---` on its own line). Each block is
 // ordinary Markdown and maps, by position, to the Nth marker in the companion
 // `.svelte` file. There are no selectors, ids, `:::` fences or other special

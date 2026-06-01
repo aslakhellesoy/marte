@@ -2,11 +2,11 @@ Markdown ⇄ Svelte
 
 ---
 
-Ha teksten i Markdown. Ha designet i Svelte. **marte** holder dem i synk ved bygging.
+Ha teksten i Markdown. Ha designet i Svelte. **malte** holder dem i synk ved bygging.
 
 ---
 
-Derfor velger team marte
+Derfor velger team malte
 
 ---
 

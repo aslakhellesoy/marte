@@ -1,5 +1,5 @@
 {
-	"name": "vite-plugin-marte",
+	"name": "malte",
 	"version": "0.0.0",
 	"description": "A Vite plugin that syncs static content between Svelte components and sibling Markdown files at build time.",
 	"keywords": [
@@ -14,7 +14,7 @@
 	"author": "Aslak Hellesøy",
 	"repository": {
 		"type": "git",
-		"url": "git+https://github.com/aslakhellesoy/marte.git"
+		"url": "git+https://github.com/aslakhellesoy/malte.git"
 	},
 	"type": "module",
 	"packageManager": "pnpm@10.33.0",
@@ -25,7 +25,7 @@
 		"dist"
 	],
 	"bin": {
-		"marte": "./dist/bin.js"
+		"malte": "./dist/bin.js"
 	},
 	"exports": {
 		".": {
@@ -48,7 +48,7 @@
 		"test:watch": "vitest",
 		"lint": "prettier --check . && eslint .",
 		"format": "prettier --write .",
-		"marte": "node --experimental-strip-types ./src/lib/bin.ts",
+		"malte": "node --experimental-strip-types ./src/lib/bin.ts",
 		"changeset": "changeset",
 		"version": "changeset version",
 		"release": "pnpm build:lib && changeset publish"

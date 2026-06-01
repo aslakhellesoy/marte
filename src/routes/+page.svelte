@@ -10,13 +10,13 @@
 
 <!--
 	The entire front page is driven by one Markdown file (+page.en.md / +page.no.md).
-	data-marte attributes mark single elements; data-marte-each marks the grid,
+	data-malte attributes mark single elements; data-malte-each marks the grid,
 	whose FactBox template repeats once per Markdown block — 8 in English, 6 in
-	Norwegian. The locale switch is reactive: marte bakes one branch per locale.
+	Norwegian. The locale switch is reactive: malte bakes one branch per locale.
 -->
 <div class="page">
 	<header class="topbar">
-		<span class="brand">marte</span>
+		<span class="brand">malte</span>
 		<nav class="switcher" aria-label="Language">
 			{#each locales as { code, label } (code)}
 				<button class:active={getLocale() === code} onclick={() => setLocale(code)}>
@@ -28,17 +28,17 @@
 
 	<section class="hero">
 		<p class="eyebrow">Vite plugin · two-way Markdown ⇄ Svelte</p>
-		<h1 data-marte>Design-time heading</h1>
-		<p class="tagline" data-marte>Design-time tagline, replaced by Markdown.</p>
+		<h1 data-malte>Design-time heading</h1>
+		<p class="tagline" data-malte>Design-time tagline, replaced by Markdown.</p>
 		<div class="cta">
-			<a class="btn" href="https://github.com/aslakhellesoy/marte">View on GitHub</a>
-			<code class="install">pnpm add -D vite-plugin-marte</code>
+			<a class="btn" href="https://github.com/aslakhellesoy/malte">View on GitHub</a>
+			<code class="install">pnpm add -D vite-plugin-malte</code>
 		</div>
 	</section>
 
 	<section class="facts">
-		<h2 data-marte>Why teams reach for marte</h2>
-		<div class="grid" data-marte-each>
+		<h2 data-malte>Why teams reach for malte</h2>
+		<div class="grid" data-malte-each>
 			<!--
 				One FactBox template. The Markdown decides how many render: each ---
 				block below the fixed markers becomes a card, so English shows 8 and

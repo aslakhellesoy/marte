@@ -2,11 +2,11 @@ Markdown ⇄ Svelte
 
 ---
 
-Keep your copy in Markdown. Keep your design in Svelte. **marte** syncs the two at build time.
+Keep your **copy** in Markdown and your **design** in Svelte.
 
 ---
 
-Why teams reach for marte
+Why teams reach for malte
 
 ---
 
@@ -34,7 +34,7 @@ Why teams reach for marte
 
 ---
 
-**Build-time, zero runtime** — no marte code ships to the browser.
+**Build-time, zero runtime** — no malte code ships to the browser.
 
 ---
 

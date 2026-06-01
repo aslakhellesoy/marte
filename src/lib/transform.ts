@@ -48,7 +48,7 @@ function labelLocale(locale: string): string {
  * the remainder. The count is computed per locale, so locales may differ (e.g.
  * 8 cards in English, 6 in Norwegian). A file may contain at most one repeatable
  * region — keeping the Markdown free of any region-divider syntax — so a second
- * `data-marte-each` is a hard error pointing at component composition instead.
+ * `data-malte-each` is a hard error pointing at component composition instead.
  */
 export function assignBlocks(
 	markers: readonly Marker[],
@@ -64,7 +64,7 @@ export function assignBlocks(
 		throw errAt(
 			file,
 			null,
-			`a Markdown file supports one repeatable region (data-marte-each), but the component ` +
+			`a Markdown file supports one repeatable region (data-malte-each), but the component ` +
 				`has ${eachCount}. Move the extra region(s) into their own components, each with its ` +
 				`own Markdown companion.`
 		);

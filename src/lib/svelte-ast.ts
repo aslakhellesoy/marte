@@ -26,12 +26,12 @@ type SvelteAttributeValue = {
 	raw?: string;
 };
 
-/** The attribute that marks an element as marte-managed. */
-export const MARKER_ATTR = 'data-marte';
+/** The attribute that marks an element as malte-managed. */
+export const MARKER_ATTR = 'data-malte';
 /** Marks a container whose single child element is a per-block repeated template. */
-export const MARKER_EACH_ATTR = 'data-marte-each';
-/** A leading comment `<!-- marte -->` / `<!-- @marte -->` also marks the next node. */
-const MARKER_COMMENT = /^\s*@?marte\s*$/;
+export const MARKER_EACH_ATTR = 'data-malte-each';
+/** A leading comment `<!-- malte -->` / `<!-- @malte -->` also marks the next node. */
+const MARKER_COMMENT = /^\s*@?malte\s*$/;
 
 /**
  * A resolved marker. `single` fills its node's inner content from one block;
@@ -91,8 +91,8 @@ export function hasAttr(node: SvelteNode, attrName: string): boolean {
 }
 
 /**
- * Walk the AST in document order and return the marte-marked elements — those
- * carrying `data-marte`, or immediately preceded by a `<!-- marte -->` comment
+ * Walk the AST in document order and return the malte-marked elements — those
+ * carrying `data-malte`, or immediately preceded by a `<!-- malte -->` comment
  * (the comment form works on Svelte components too, where an attribute would be
  * a type error). A marked element is NOT descended into: its whole inner content
  * belongs to its companion Markdown block.
@@ -116,7 +116,7 @@ export function collectMarkers(nodes: readonly SvelteNode[]): Marker[] {
 				const template = childNodes(n).find(isElement);
 				if (!template) {
 					throw new Error(
-						`marte: <${n.name} ${MARKER_EACH_ATTR}> needs exactly one child element to use as the repeated template`
+						`malte: <${n.name} ${MARKER_EACH_ATTR}> needs exactly one child element to use as the repeated template`
 					);
 				}
 				out.push({ kind: 'each', node: n, template });

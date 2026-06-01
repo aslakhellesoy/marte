@@ -12,20 +12,20 @@ const I18N: RuntimeConfig = {
 describe('transformSvelteSource — single locale', () => {
 	test('bakes inline content into a leaf marker and drops the placeholder', () => {
 		const out = transformSvelteSource(
-			'<h1 data-marte>Placeholder</h1>\n',
+			'<h1 data-malte>Placeholder</h1>\n',
 			{ '': 'Hello **world**\n' },
 			SINGLE,
 			'f'
 		);
-		expect(out).toContain('<h1 data-marte>');
+		expect(out).toContain('<h1 data-malte>');
 		expect(out).toContain('Hello <strong>world</strong>');
 		expect(out).not.toContain('Placeholder');
 	});
 
 	test('re-skins a list, keeping the marked element’s own attributes', () => {
-		const svelte = '<ul data-marte class="feats">\n\t<li class="i">A</li>\n</ul>\n';
+		const svelte = '<ul data-malte class="feats">\n\t<li class="i">A</li>\n</ul>\n';
 		const out = transformSvelteSource(svelte, { '': '- one\n- two\n' }, SINGLE, 'f');
-		expect(out).toContain('<ul data-marte class="feats">');
+		expect(out).toContain('<ul data-malte class="feats">');
 		expect(out).toContain('<li class="i">one</li>');
 		expect(out).toContain('<li class="i">two</li>');
 	});
@@ -38,7 +38,7 @@ describe('transformSvelteSource — single locale', () => {
 	test('throws when block count and marker count differ', () => {
 		expect(() =>
 			transformSvelteSource(
-				'<h1 data-marte>a</h1>\n<p data-marte>b</p>\n',
+				'<h1 data-malte>a</h1>\n<p data-malte>b</p>\n',
 				{ '': 'only one\n' },
 				SINGLE,
 				'f'
@@ -50,7 +50,7 @@ describe('transformSvelteSource — single locale', () => {
 describe('transformSvelteSource — i18n', () => {
 	test('bakes one {#if} branch per locale and injects the runtime import', () => {
 		const out = transformSvelteSource(
-			'<h1 data-marte>x</h1>\n',
+			'<h1 data-malte>x</h1>\n',
 			{ en: 'Hello\n', no: 'Hei\n' },
 			I18N,
 			'f'
@@ -66,18 +66,18 @@ describe('transformSvelteSource — i18n', () => {
 
 describe('checkSvelteSource', () => {
 	test('returns the marker count when everything resolves', () => {
-		expect(checkSvelteSource('<h1 data-marte>a</h1>\n', 'Hi\n', 'f')).toBe(1);
+		expect(checkSvelteSource('<h1 data-malte>a</h1>\n', 'Hi\n', 'f')).toBe(1);
 	});
 
 	test('throws on a structural mismatch', () => {
-		expect(() => checkSvelteSource('<ul data-marte><li>a</li></ul>\n', 'paragraph\n', 'f')).toThrow(
+		expect(() => checkSvelteSource('<ul data-malte><li>a</li></ul>\n', 'paragraph\n', 'f')).toThrow(
 			/no matching placeholder element/
 		);
 	});
 });
 
-describe('transformSvelteSource — repeatable regions (data-marte-each)', () => {
-	const each = '<div data-marte-each>\n\t<Item>placeholder</Item>\n</div>\n';
+describe('transformSvelteSource — repeatable regions (data-malte-each)', () => {
+	const each = '<div data-malte-each>\n\t<Item>placeholder</Item>\n</div>\n';
 	const count = (s: string, re: RegExp) => (s.match(re) ?? []).length;
 
 	test('repeats the template once per block (remainder rule)', () => {
@@ -90,7 +90,7 @@ describe('transformSvelteSource — repeatable regions (data-marte-each)', () =>
 
 	test('fixed markers take one block each; the each region takes the remainder', () => {
 		const out = transformSvelteSource(
-			`<h1 data-marte>t</h1>\n${each}`,
+			`<h1 data-malte>t</h1>\n${each}`,
 			{ '': 'Title\n---\nA\n---\nB\n---\nC\n' },
 			SINGLE,
 			'f'

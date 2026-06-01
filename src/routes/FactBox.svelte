@@ -1,8 +1,8 @@
 <script lang="ts">
 	import type { Snippet } from 'svelte';
 
-	// A stat/benefit card. marte replaces its slot content (marked with a
-	// `<!-- marte -->` comment at the use site) with a block from the page's
+	// A stat/benefit card. malte replaces its slot content (marked with a
+	// `<!-- malte -->` comment at the use site) with a block from the page's
 	// Markdown. The card chrome — border, hover, the accent lead — is all here.
 	let { children }: { children: Snippet } = $props();
 </script>

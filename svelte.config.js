@@ -12,7 +12,7 @@ const config = {
 		adapter: adapter(),
 		paths: { base },
 		alias: {
-			// Demo-only runtime locale store, used by the marte plugin's injected
+			// Demo-only runtime locale store, used by the malte plugin's injected
 			// `runtimeLocale.importStatement` in vite.config.ts.
 			$demo: 'src/demo'
 		}

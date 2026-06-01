@@ -5,7 +5,7 @@ describe('generateMd — bootstrap (no markers yet)', () => {
 	test('marks the outermost static element and serializes its content', () => {
 		const svelte = '<section>\n\t<h1>Hello</h1>\n\t<p>World</p>\n</section>\n';
 		const { md, svelte: out, markersAdded } = generateMd(svelte, []);
-		expect(out).toContain('<section data-marte>');
+		expect(out).toContain('<section data-malte>');
 		expect(md).toContain('# Hello');
 		expect(md).toContain('World');
 		expect(markersAdded).toBe(1);
@@ -24,7 +24,7 @@ describe('generateMd — bootstrap (no markers yet)', () => {
 
 describe('generateMd — existing markers', () => {
 	test('serializes each marked element in order, leaving the source unchanged', () => {
-		const svelte = '<h1 data-marte>A</h1>\n<p data-marte>B</p>\n';
+		const svelte = '<h1 data-malte>A</h1>\n<p data-malte>B</p>\n';
 		const { md, markersAdded } = generateMd(svelte, []);
 		// Marked leaf elements serialize their inner text positionally.
 		expect(md.trim()).toBe('A\n\n---\n\nB');

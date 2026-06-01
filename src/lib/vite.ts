@@ -46,16 +46,16 @@ type ResolvedOptions =
 	  };
 
 const PARAGLIDE_RUNTIME: RuntimeLocale = {
-	importStatement: `import { getLocale as __marteGetLocale } from '$lib/paraglide/runtime';`,
-	expression: '__marteGetLocale()'
+	importStatement: `import { getLocale as __malteGetLocale } from '$lib/paraglide/runtime';`,
+	expression: '__malteGetLocale()'
 };
 
-export function marte(options: MarteOptions = {}): Plugin {
+export function malte(options: MarteOptions = {}): Plugin {
 	let resolved: ResolvedOptions | null = null;
 	let viteRoot = process.cwd();
 
 	return {
-		name: 'marte',
+		name: 'malte',
 		enforce: 'pre',
 
 		async configResolved(config) {
@@ -107,7 +107,7 @@ export function marte(options: MarteOptions = {}): Plugin {
  * for SvelteKit's generated root). The dev server's chokidar watcher already
  * covers the project tree, so newly created companions still fire
  * `handleHotUpdate` and trigger a reload. Returns null when the file is not
- * marte-managed (no base companion).
+ * malte-managed (no base companion).
  */
 async function readCompanions(
 	sveltePath: string,
@@ -140,10 +140,10 @@ async function readCompanions(
 	if (present.length === 0) return null;
 	if (missing.length > 0) {
 		throw new Error(
-			`marte: ${sveltePath} has companions for [${present.join(', ')}] but is missing ` +
+			`malte: ${sveltePath} has companions for [${present.join(', ')}] but is missing ` +
 				`translations for [${missing.join(', ')}]. Create ${missing
 					.map((l) => `${base}.${l}.md`)
-					.join(', ')} (or remove the existing companions if this page is not marte-managed).`
+					.join(', ')} (or remove the existing companions if this page is not malte-managed).`
 		);
 	}
 	return out;
@@ -188,7 +188,7 @@ function makeI18n(
 	const runtimeLocale = opts.runtimeLocale ?? (paraglide ? PARAGLIDE_RUNTIME : undefined);
 	if (!runtimeLocale) {
 		throw new Error(
-			`marte: i18n mode (locales [${locales.join(', ')}]) requires a \`runtimeLocale\` option ` +
+			`malte: i18n mode (locales [${locales.join(', ')}]) requires a \`runtimeLocale\` option ` +
 				`describing how to read the active locale at runtime, e.g. ` +
 				`{ importStatement: "import { getLocale } from '$lib/i18n'", expression: 'getLocale()' }.`
 		);
@@ -204,7 +204,7 @@ async function readParaglideSettings(projectPath: string): Promise<ParaglideSett
 	const parsed = JSON.parse(raw) as Partial<ParaglideSettings>;
 	if (!parsed.baseLocale || !Array.isArray(parsed.locales)) {
 		throw new Error(
-			`marte plugin: ${settingsPath} is missing baseLocale or locales — cannot determine target locales.`
+			`malte plugin: ${settingsPath} is missing baseLocale or locales — cannot determine target locales.`
 		);
 	}
 	return { baseLocale: parsed.baseLocale, locales: parsed.locales };

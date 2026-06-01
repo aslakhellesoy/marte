@@ -28,9 +28,9 @@ function parseArgs(argv: readonly string[]): CliArgs {
 
 const USAGE =
 	'usage:\n' +
-	'  marte check   [--dir src] [--locale en | --ext .md]\n' +
-	'  marte apply   [--dir src] [--locale en | --ext .md]\n' +
-	'  marte extract <file|dir|glob> [--locale en | --ext .md] [--force] [--dry]\n' +
+	'  malte check   [--dir src] [--locale en | --ext .md]\n' +
+	'  malte apply   [--dir src] [--locale en | --ext .md]\n' +
+	'  malte extract <file|dir|glob> [--locale en | --ext .md] [--force] [--dry]\n' +
 	'\n' +
 	'  Default companion extension is ".md". --locale L sets it to ".L.md".';
 
@@ -84,7 +84,7 @@ function runExtract(args: CliArgs, ext: string): void {
 			if (args.dry) {
 				console.log(`--- ${result.mdFile}\n${result.md}`);
 				if (result.svelteChanged) {
-					console.error(`  (would add ${result.markersAdded} data-marte marker(s) to ${file})`);
+					console.error(`  (would add ${result.markersAdded} data-malte marker(s) to ${file})`);
 				}
 			} else {
 				writeFileSync(result.mdFile, result.md);
@@ -92,7 +92,7 @@ function runExtract(args: CliArgs, ext: string): void {
 				console.log(`✎ wrote ${result.mdFile}`);
 				if (result.svelteChanged) {
 					writeFileSync(file, result.svelte);
-					console.log(`✎ added ${result.markersAdded} data-marte marker(s) to ${file}`);
+					console.log(`✎ added ${result.markersAdded} data-malte marker(s) to ${file}`);
 				}
 			}
 			if (result.verified) console.log(`✓ verified against ${file}`);
