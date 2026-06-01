@@ -1,6 +1,6 @@
 {
 	"name": "@oselvar/malte",
-	"version": "0.0.0",
+	"version": "0.0.1",
 	"description": "A Vite plugin that syncs static content between Svelte components and sibling Markdown files at build time.",
 	"keywords": [
 		"vite-plugin",
